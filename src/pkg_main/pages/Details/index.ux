@@ -1,0 +1,314 @@
+<template>
+  <div class="page">
+    <div class="header-section">
+       <image class="header-bg" src="../../assets/img/zhangdanxiangqing-bg.png"></image>
+       
+       <div class="back-box" onclick="goBack">
+          <image class="back-icon" src="../../assets/img/back.png"></image>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+       <div class="card">
+          <div class="card-header">
+             <image class="category-icon" src="{{record.icon || '../../assets/img/zhichu/qitaxiaofei2.png'}}"></image>
+             <text class="category-name">{{record.category}}</text>
+          </div>
+          
+          <div class="divider-line"></div>
+          
+          <div class="card-body">
+             <div class="info-row">
+                <text class="label">类型</text>
+                <text class="value">{{record.type === 'income' ? '收入' : '支出'}}</text>
+             </div>
+             
+             <div class="info-row">
+                <text class="label">金额</text>
+                <text class="value amount {{record.type === 'income' ? 'income-color' : 'expense-color'}}">{{record.amount}}</text>
+             </div>
+
+             <div class="info-row">
+                <text class="label">日期</text>
+                <text class="value">{{record.fullDate}}</text>
+             </div>
+
+             <div class="info-row">
+                <text class="label">备注</text>
+                <text class="value">{{record.note || '无'}}</text>
+             </div>
+          </div>
+       </div>
+    </div>
+
+    <div class="footer">
+       <div class="delete-btn" onclick="deleteRecord">
+          <text class="delete-text">删除账单</text>
+       </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import prompt from '@system.prompt'
+import storage from '@system.storage'
+
+export default {
+    protected: {
+        recordStr: ''
+    },
+    private: {
+        record: {
+            icon: '',
+            category: '',
+            amount: '',
+            type: '',
+            fullDate: '',
+            note: '',
+            date: 0,
+            dateStr: ''
+        }
+    },
+    onInit() {
+        if (this.recordStr) {
+            try {
+                // Decode if needed (parameters might be encoded)
+                // But usually router params are just strings.
+                // If special chars, sometimes need decodeURIComponent.
+                // Assuming raw string for now.
+                this.record = JSON.parse(this.recordStr)
+                if (!this.record.fullDate && this.record.dateStr) {
+                    this.record.fullDate = this.record.dateStr
+                }
+                if (!this.record.icon && this.record.categoryIcon) {
+                    this.record.icon = this.record.categoryIcon
+                }
+            } catch(e) {
+                console.error(e)
+            }
+        }
+    },
+    normalizeAmount(value) {
+        if (value === undefined || value === null) return NaN
+        const cleaned = String(value).replace(/[^\d.-]/g, '')
+        if (!cleaned) return NaN
+        return parseFloat(cleaned)
+    },
+    goBack() {
+        router.back()
+    },
+    deleteRecord() {
+        console.log('删除按钮被点击')
+        console.log('当前记录:', this.record)
+        
+        prompt.showDialog({
+            title: '提示',
+            message: '确定要删除这条账单吗？',
+            buttons: [
+                { text: '取消', color: '#666666' },
+                { text: '删除', color: '#ff0000' }
+            ],
+            success: (data) => {
+                console.log('对话框返回:', data)
+                if(data.index === 1 || data.index === '1') {
+                    console.log('开始删除操作')
+                    // 从 storage 中删除数据
+                    storage.get({
+                        key: 'accounting_records',
+                        success: (res) => {
+                            console.log('获取storage成功:', res)
+                            let records = []
+                            const raw = res && res.data !== undefined ? res.data : res
+                            if (Array.isArray(raw)) {
+                                records = raw
+                            } else if (raw) {
+                                try {
+                                    records = JSON.parse(raw)
+                                    console.log('解析后的记录数:', records.length)
+                                } catch (e) {
+                                    console.error('解析记录失败', e)
+                                }
+                            }
+                            
+                            const targetDate = this.record.date ? Number(this.record.date) : 0
+                            const targetDateStr = this.record.dateStr || ''
+                            const targetAmount = this.normalizeAmount(this.record.amount)
+                            
+                            console.log('目标记录信息:', { targetDate, targetDateStr, targetAmount, category: this.record.category, type: this.record.type })
+
+                            const filteredRecords = records.filter(item => {
+                                const itemDate = item.date ? Number(item.date) : 0
+                                const itemDateStr = item.dateStr || ''
+                                const itemAmount = this.normalizeAmount(item.amount)
+
+                                const sameAmount = (!isNaN(targetAmount) && !isNaN(itemAmount))
+                                    ? itemAmount === targetAmount
+                                    : item.amount === this.record.amount
+                                const sameCategory = item.category === this.record.category
+                                const sameType = item.type === this.record.type
+                                const sameDate = targetDate && itemDate ? itemDate === targetDate : false
+                                const sameDateStr = targetDateStr && itemDateStr ? itemDateStr === targetDateStr : false
+
+                                const matched = sameCategory && sameType && sameAmount && (sameDate || sameDateStr)
+                                
+                                if (matched) {
+                                    console.log('匹配到要删除的记录:', item)
+                                }
+                                
+                                return !matched
+                            })
+                            
+                            console.log('过滤后记录数:', filteredRecords.length)
+                            
+                            // 保存更新后的记录
+                            storage.set({
+                                key: 'accounting_records',
+                                value: JSON.stringify(filteredRecords),
+                                success: () => {
+                                    console.log('保存成功')
+                                    prompt.showToast({ message: '删除成功' })
+                                    router.back()
+                                },
+                                fail: (err) => {
+                                    console.error('保存失败:', err)
+                                    prompt.showToast({ message: '删除失败' })
+                                }
+                            })
+                        },
+                        fail: (err) => {
+                            console.error('获取数据失败:', err)
+                            prompt.showToast({ message: '获取数据失败' })
+                        }
+                    })
+                }
+            },
+            cancel: () => {
+                console.log('对话框被取消')
+            }
+        })
+    }
+}
+</script>
+
+<style>
+.page {
+  flex-direction: column;
+  background-color: #f7f8fa;
+}
+.header-section {
+  width: 100%;
+  height: 150px; 
+  position: relative;
+  flex-direction: column;
+}
+.header-bg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    resize-mode: cover;
+}
+.back-box {
+    position: absolute;
+    left: 7px;
+    top: 38px;
+    width: 22px;
+    height: 22px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.3);
+    justify-content: center;
+    align-items: center;
+}
+.back-icon {
+    width: 6px;
+    height: 10px;
+    resize-mode: contain;
+}
+
+.content-wrapper {
+    flex-direction: column;
+    padding: 0 12px;
+    margin-top: -58px; 
+}
+.card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    flex-direction: column;
+    align-items: center;
+}
+.card-header {
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.category-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 8px;
+}
+.category-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: #333333;
+    margin-top: 4px;
+}
+.divider-line {
+    width: 100%;
+    height: 1px;
+    border-bottom-width: 1px;
+    border-bottom-style: dashed;
+    border-bottom-color: #dddddd;
+    margin-bottom: 16px;
+}
+.card-body {
+    width: 100%;
+    flex-direction: column;
+}
+.info-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.label {
+    font-size: 11px;
+    color: #999999;
+}
+.value {
+    font-size: 11px;
+    color: #333333;
+}
+.amount {
+    font-weight: bold;
+    font-size: 12px;
+}
+.income-color {
+    color: #00d8ea;
+}
+.expense-color {
+    color: #ff5252;
+}
+.footer {
+    position: fixed;
+    bottom: 24px;
+    left: 0;
+    width: 100%;
+    padding: 0 12px;
+    justify-content: center;
+    z-index: 10;
+}
+.delete-btn {
+    width: 100%;
+    height: 36px;
+    background-color: #ff3333;
+    border-radius: 18px;
+    justify-content: center;
+    align-items: center;
+}
+.delete-text {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: bold;
+}
+</style>

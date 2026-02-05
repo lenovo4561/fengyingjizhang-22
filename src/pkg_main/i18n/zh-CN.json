@@ -1,0 +1,129 @@
+{
+  "app": {
+    "name": "丰盈记账"
+  },
+  "tabs": {
+    "mingxi": "明细",
+    "jizhang": "记账",
+    "zhangdan": "账单",
+    "mine": "我的"
+  },
+  "jizhang": {
+    "expense": "支出",
+    "income": "收入",
+    "notePlaceholder": "点击添加备注",
+    "today": "今日",
+    "submit": "记一笔",
+    "categories": {
+      "food": "餐饮",
+      "shopping": "购物",
+      "transport": "交通",
+      "entertainment": "娱乐",
+      "home": "居家",
+      "social": "社交",
+      "health": "医疗",
+      "education": "教育",
+      "other": "其他",
+      "salary": "工资",
+      "bonus": "奖金",
+      "investment": "投资",
+      "partTime": "兼职",
+      "otherIncome": "其他收入"
+    },
+    "items": {
+      "dailyMeal": "日常三餐",
+      "snacks": "零食饮料",
+      "takeout": "外卖",
+      "dining": "聚餐",
+      "fruits": "水果",
+      "clothing": "服饰",
+      "beauty": "美妆",
+      "electronics": "数码",
+      "daily": "日用品",
+      "publicTransport": "公交地铁",
+      "taxi": "打车",
+      "fuel": "加油",
+      "movie": "电影",
+      "game": "游戏",
+      "sports": "运动",
+      "rent": "房租",
+      "utilities": "水电费",
+      "furniture": "家具",
+      "gift": "礼物",
+      "redPacket": "红包",
+      "hospital": "医院",
+      "medicine": "买药",
+      "tuition": "学费",
+      "books": "书籍",
+      "monthlySalary": "月工资",
+      "yearEndBonus": "年终奖",
+      "stock": "股票",
+      "fund": "基金"
+    }
+  },
+  "mingxi": {
+    "title": "明细",
+    "total": "总计",
+    "income": "收入",
+    "expense": "支出",
+    "all": "全部",
+    "noData": "暂无数据"
+  },
+  "zhangdan": {
+    "title": "账单",
+    "monthlyBill": "月度账单",
+    "yearlyBill": "年度账单",
+    "balance": "结余",
+    "totalIncome": "总收入",
+    "totalExpense": "总支出",
+    "budget": "预算"
+  },
+  "mine": {
+    "title": "我的",
+    "settings": "设置",
+    "about": "关于我们",
+    "userAgreement": "用户协议",
+    "privacyPolicy": "隐私政策",
+    "feedback": "意见反馈",
+    "share": "分享应用"
+  },
+  "actions": {
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "edit": "编辑",
+    "agree": "同意并继续",
+    "disagree": "不同意",
+    "submit": "提交"
+  },
+  "messages": {
+    "saveSuccess": "保存成功",
+    "saveFail": "保存失败",
+    "deleteSuccess": "删除成功",
+    "deleteFail": "删除失败",
+    "inputAmount": "请输入金额",
+    "selectCategory": "请选择分类",
+    "networkError": "网络错误，请稍后重试"
+  },
+  "splash": {
+    "agreementTitle": "用户协议及隐私政策",
+    "agreementText": "尊敬的用户：欢迎使用\"丰盈记账\"，在使用前请仔细阅读",
+    "privacyPolicy": "隐私政策",
+    "userAgreement": "用户协议",
+    "agreementTextEnd": "，我们将严格遵守您同意的各项条款使用您的信息，以便为您提供更好的服务。点击\"同意\"意味着您自愿遵守《隐私政策》，我们将严格保护您的个人信息，确保信息安全。"
+  },
+  "common": {
+    "loading": "加载中...",
+    "loadMore": "加载更多",
+    "noMore": "没有更多了",
+    "refresh": "刷新",
+    "back": "返回",
+    "search": "搜索",
+    "filter": "筛选",
+    "date": "日期",
+    "amount": "金额",
+    "category": "分类",
+    "note": "备注"
+  }
+}

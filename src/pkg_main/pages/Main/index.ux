@@ -1,0 +1,200 @@
+<import name="mingxi-page" src="../Mingxi/index.ux"></import>
+<import name="jizhang-page" src="../Jizhang/index.ux"></import>
+<import name="zhangdan-page" src="../Zhangdan/index.ux"></import>
+<import name="mine-page" src="../Mine/index.ux"></import>
+
+<template>
+  <div class="main-page">
+    <tabs class="tabs" onchange="changeTab" index="{{currentIndex}}">
+      <tab-content class="tab-content">
+        <mingxi-page id="mingxi-page" is-active="{{currentIndex === 0}}"></mingxi-page>
+        <jizhang-page id="jizhang-page"></jizhang-page>
+        <zhangdan-page id="zhangdan-page" onnavigate-back="onZhangdanBack"></zhangdan-page>
+        <mine-page id="mine-page"></mine-page>
+      </tab-content>
+    </tabs>
+
+    <div class="tab-bar">
+      <div class="tab-item" onclick="clickTab(0)">
+        <image
+          class="tab-icon"
+          src="{{currentIndex === 0 ? '../../assets/img/mingxi-s.png' : '../../assets/img/mingxi-u.png'}}"
+        ></image>
+        <text
+          class="tab-text"
+          style="color: {{currentIndex === 0 ? '#FFFFFF' : '#999999'}}"
+          >明细</text>
+      </div>
+      <div class="tab-item" onclick="clickTab(1)">
+        <image
+          class="tab-icon"
+          src="{{currentIndex === 1 ? '../../assets/img/jizhang-s.png' : '../../assets/img/jizhang-u.png'}}"
+        ></image>
+        <text
+          class="tab-text"
+          style="color: {{currentIndex === 1 ? '#FFFFFF' : '#999999'}}"
+          >记账</text>
+      </div>
+      <div class="tab-item" onclick="clickTab(2)">
+        <image
+          class="tab-icon"
+          src="{{currentIndex === 2 ? '../../assets/img/zhangdan-s.png' : '../../assets/img/zhangdan-u.png'}}"
+        ></image>
+        <text
+          class="tab-text"
+          style="color: {{currentIndex === 2 ? '#FFFFFF' : '#999999'}}"
+          >账单</text>
+      </div>
+      <div class="tab-item" onclick="clickTab(3)">
+        <image
+          class="tab-icon"
+          src="{{currentIndex === 3 ? '../../assets/img/mine-s.png' : '../../assets/img/mine-u.png'}}"
+        ></image>
+        <text
+          class="tab-text"
+          style="color: {{currentIndex === 3 ? '#FFFFFF' : '#999999'}}"
+          >我的</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  private: {
+    currentIndex: 0
+  },
+  onInit() {
+    console.log('Main page initialized')
+    if (this.tabIndex !== undefined && this.tabIndex !== null) {
+      this.currentIndex = parseInt(this.tabIndex)
+      console.log('Main page - switch to tab:', this.currentIndex)
+    }
+    // 监听子组件的切换标签页事件
+    this.$on('switchToTab', this.handleSwitchTab)
+  },
+  handleSwitchTab(evt) {
+    if (evt && evt.detail && evt.detail.index !== undefined) {
+      this.currentIndex = evt.detail.index
+      console.log('Main page - switch to tab by child event:', evt.detail.index)
+      
+      // 切换到明细页时刷新数据
+      if (evt.detail.index === 0) {
+        setTimeout(() => {
+          const mingxiPage = this.$child('mingxi-page')
+          if (mingxiPage && mingxiPage.loadMonthData) {
+            mingxiPage.loadMonthData()
+          }
+        }, 100)
+      }
+      // 切换到账单页时刷新数据
+      else if (evt.detail.index === 2) {
+        setTimeout(() => {
+          const zhangdanPage = this.$child('zhangdan-page')
+          if (zhangdanPage && zhangdanPage.loadYearData) {
+            zhangdanPage.loadYearData()
+          }
+        }, 100)
+      }
+    }
+  },
+  onShow() {
+    console.log('Main page onShow')
+    // 当从详情页返回时，刷新当前页面的数据
+    if (this.currentIndex === 0) {
+      // 刷新明细页
+      const mingxiPage = this.$child('mingxi-page')
+      if (mingxiPage && mingxiPage.loadMonthData) {
+        mingxiPage.loadMonthData()
+      }
+    } else if (this.currentIndex === 2) {
+      // 刷新账单页
+      const zhangdanPage = this.$child('zhangdan-page')
+      if (zhangdanPage && zhangdanPage.loadYearData) {
+        zhangdanPage.loadYearData()
+      }
+    }
+  },
+  changeTab(e) {
+    this.currentIndex = e.index
+    console.log('Main page - tab changed to:', e.index)
+    this.refreshCurrentTab(e.index)
+  },
+  clickTab(index) {
+    this.currentIndex = index
+    console.log('Main page - tab clicked:', index)
+    this.refreshCurrentTab(index)
+  },
+  refreshCurrentTab(index) {
+    // 刷新当前标签页的数据
+    setTimeout(() => {
+      if (index === 0) {
+        const mingxiPage = this.$child('mingxi-page')
+        if (mingxiPage && mingxiPage.loadMonthData) {
+          mingxiPage.loadMonthData()
+        }
+      } else if (index === 2) {
+        const zhangdanPage = this.$child('zhangdan-page')
+        if (zhangdanPage && zhangdanPage.loadYearData) {
+          zhangdanPage.loadYearData()
+        }
+      }
+    }, 100)
+  },
+  onZhangdanBack() {
+    // Return to the first tab (Mingxi) or the previous one if tracked
+    this.currentIndex = 0
+  }
+}
+</script>
+
+<style>
+.main-page {
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.tabs {
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tab-content {
+  flex: 1;
+  width: 100%;
+}
+
+.tab-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 12px;
+  right: 12px;
+  height: 42px;
+  background-color: #000000;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  border-radius: 21px;
+}
+
+.tab-item {
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.tab-icon {
+  width: 16px;
+  height: 16px;
+  margin-bottom: 2px;
+}
+
+.tab-text {
+  font-size: 7px;
+  color: #999999;
+}
+</style>

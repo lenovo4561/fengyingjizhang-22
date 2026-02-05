@@ -1,0 +1,428 @@
+<template>
+  <list class="page">
+    <list-item type="content" class="content-item">
+      <!-- 顶部背景区域 -->
+      <div class="header-wrapper">
+        <image class="header-bg" src="/pkg_main/assets/img/nianduzhangdan-bg.png"></image>
+      </div>
+
+      <!-- 年度汇总卡片 -->
+      <div class="summary-card">
+        <div class="blur-layer"></div>
+        <div class="frost-overlay"></div>
+        <div class="summary-content">
+          <div class="year-row-wrapper" onclick="showYearPicker">
+            <div class="year-row">
+              <text class="year-text">{{ year }}年度账单</text>
+              <image class="year-arrow" src="/pkg_main/assets/img/xia.png"></image>
+            </div>
+            <picker
+              id="yearPicker"
+              class="year-picker"
+              type="text"
+              range="{{yearRange}}"
+              value="{{year}}"
+              onchange="onYearChange"
+            ></picker>
+          </div>
+          <text class="summary-label">年度结余</text>
+          <text class="summary-amount">¥{{ summary.balance }}</text>
+          <div class="summary-row">
+            <text class="summary-item">年度支出：¥{{ summary.expense }}</text>
+            <text class="summary-item">年度收入：¥{{ summary.income }}</text>
+          </div>
+        </div>
+      </div>
+
+      <!-- 月份列表 -->
+      <div class="list-card">
+        <div class="list-header">
+          <text class="header-cell">月份</text>
+          <text class="header-cell">支出</text>
+          <text class="header-cell">收入</text>
+          <text class="header-cell">结余</text>
+        </div>
+        <div class="empty-box" if="{{!months || months.length === 0}}">
+          <image class="empty-img" src="/pkg_main/assets/img/kong-1.png"></image>
+          <text class="empty-text">当前暂无数据~</text>
+        </div>
+        <block else>
+          <block for="{{ months }}">
+            <div class="list-row" onclick="goToTongji($item)">
+              <div class="cell-wrapper">
+                <div class="month-tag">
+                  <text class="month-text">{{$item.month}}</text>
+                </div>
+              </div>
+              <text class="cell-text">{{$item.expense}}</text>
+              <text class="cell-text">{{$item.income}}</text>
+              <text class="cell-text">{{$item.balance}}</text>
+              <image class="row-arrow" src="/pkg_main/assets/img/jiantou.png"></image>
+            </div>
+            <div class="row-divider"></div>
+          </block>
+        </block>
+      </div>
+    </list-item>
+  </list>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+
+export default {
+  data: {
+    year: 2025,
+    yearRange: [],
+    summary: {
+      balance: '0.00',
+      expense: '0.00',
+      income: '0.00'
+    },
+    months: []
+  },
+  onInit() {
+    const date = new Date()
+    this.year = date.getFullYear()
+    
+    // 生成年份范围（当前年份前后10年）
+    const currentYear = date.getFullYear()
+    const years = []
+    for (let i = currentYear - 10; i <= currentYear + 5; i++) {
+      years.push(i.toString())
+    }
+    this.yearRange = years
+    
+    this.loadYearData()
+  },
+  onShow() {
+    this.loadYearData()
+  },
+  loadYearData() {
+    storage.get({
+      key: 'accounting_records',
+      success: data => {
+        let allRecords = []
+        if (data) {
+          try {
+            allRecords = JSON.parse(data)
+          } catch (e) {
+            console.error('解析记录失败', e)
+          }
+        }
+
+        // 过滤当年记录
+        const yearPrefix = `${this.year}-`
+        const yearRecords = allRecords.filter(r => r.dateStr && r.dateStr.startsWith(yearPrefix))
+
+        // 计算年度汇总
+        let totalIncome = 0
+        let totalExpense = 0
+        yearRecords.forEach(r => {
+          if (r.type === 'income') {
+            totalIncome += r.amount
+          } else if (r.type === 'expense') {
+            totalExpense += r.amount
+          }
+        })
+
+        this.summary = {
+          balance: this.formatAmount(totalIncome - totalExpense),
+          expense: this.formatAmount(totalExpense),
+          income: this.formatAmount(totalIncome)
+        }
+
+        // 按月份统计
+        const monthStats = {}
+        for (let m = 1; m <= 12; m++) {
+          monthStats[m] = { income: 0, expense: 0 }
+        }
+
+        yearRecords.forEach(r => {
+          const month = parseInt(r.dateStr.split('-')[1])
+          if (r.type === 'income') {
+            monthStats[month].income += r.amount
+          } else if (r.type === 'expense') {
+            monthStats[month].expense += r.amount
+          }
+        })
+
+        // 转换为数组，只显示有数据的月份
+        const monthList = []
+        for (let m = 1; m <= 12; m++) {
+          const stats = monthStats[m]
+          if (stats.income > 0 || stats.expense > 0) {
+            monthList.push({
+              month: `${m}月`,
+              monthNum: m,
+              expense: this.formatAmount(stats.expense),
+              income: this.formatAmount(stats.income),
+              balance: this.formatAmount(stats.income - stats.expense)
+            })
+          }
+        }
+
+        // 倒序显示（最近的月份在前）
+        this.months = monthList.reverse()
+      },
+      fail: () => {
+        this.summary = {
+          balance: '0.00',
+          expense: '0.00',
+          income: '0.00'
+        }
+        this.months = []
+      }
+    })
+  },
+  formatAmount(num) {
+    return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  },
+  showYearPicker() {
+    // 触发 picker 显示
+    this.$element('yearPicker').show()
+  },
+  onYearChange(e) {
+    // e.newValue 是选中的年份字符串
+    this.year = parseInt(e.newValue)
+    this.loadYearData()
+  },
+  goToTongji(item) {
+    router.push({
+      uri: '/pkg_main/pages/Tongji',
+      params: {
+        year: this.year,
+        month: item.monthNum
+      }
+    })
+  }
+}
+</script>
+
+<style>
+.page {
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: #f5f6f8;
+}
+
+.content-item {
+  flex-direction: column;
+}
+
+/* 顶部背景区域 */
+.header-wrapper {
+  width: 100%;
+  height: 150px;
+  position: relative;
+  flex-direction: column;
+}
+
+.header-bg {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  resize-mode: cover;
+}
+
+/* 年度汇总卡片 */
+.summary-card {
+  position: relative;
+  flex-direction: column;
+  background-color: rgba(255, 255, 255, 0.55);
+  margin: -55px 12px 0 12px;
+  border-radius: 12px;
+  padding: 10px 12px 12px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.blur-layer {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+  filter: blur(7px);
+}
+
+.frost-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.7)
+  );
+}
+
+.summary-content {
+  position: relative;
+  z-index: 1;
+  flex-direction: column;
+  width: 100%;
+}
+
+.year-row-wrapper {
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.year-row {
+  flex-direction: row;
+  align-items: center;
+}
+
+.year-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.year-text {
+  font-size: 12px;
+  color: #222222;
+  font-weight: bold;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.year-arrow {
+  width: 10px;
+  height: 10px;
+  margin-left: 6px;
+  resize-mode: contain;
+}
+
+.summary-label {
+  font-size: 10px;
+  color: #333333;
+  margin-bottom: 3px;
+}
+
+.summary-amount {
+  font-size: 22px;
+  color: #11c5e6;
+  font-weight: bold;
+  margin-top: 1px;
+  margin-bottom: 6px;
+}
+
+.summary-row {
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.summary-item {
+  font-size: 9px;
+  color: #666666;
+}
+
+/* 月份列表 */
+.list-card {
+  flex-direction: column;
+  background-color: #ffffff;
+  margin: 12px 12px 20px 12px;
+  border-radius: 12px;
+  padding: 8px 0;
+}
+
+.list-header {
+  flex-direction: row;
+  align-items: center;
+  padding: 6px 22px 6px 8px;
+  margin: 0 6px 6px 6px;
+  border-radius: 8px;
+  background-color: #eaf9ff;
+}
+
+.header-cell {
+  flex: 1;
+  font-size: 9px;
+  color: #6b7c85;
+  text-align: center;
+}
+
+.list-row {
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+  padding: 10px 30px 10px 14px;
+}
+
+.cell-wrapper {
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+}
+
+.month-tag {
+  width: 32px;
+  height: 16px;
+  border-radius: 6px;
+  background-color: #11c5e6;
+  align-items: center;
+  justify-content: center;
+}
+
+.month-text {
+  font-size: 9px;
+  color: #000;
+  font-weight: bold;
+}
+
+.cell-text {
+  flex: 1;
+  font-size: 8px;
+  color: #333333;
+  text-align: center;
+}
+
+.row-arrow {
+  position: absolute;
+  right: 4px;
+  width: 36px;
+  height: 36px;
+  resize-mode: contain;
+}
+
+.row-divider {
+  height: 1px;
+  background-color: #f0f0f0;
+  margin: 0 12px;
+}
+
+.empty-box {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding-top: 50px;
+  padding-bottom: 50px;
+  width: 100%;
+}
+
+.empty-img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+}
+
+.empty-text {
+  margin-top: 8px;
+  font-size: 8px;
+  color: #c4c7ce;
+}
+</style>
